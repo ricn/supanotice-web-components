@@ -13,6 +13,7 @@ interface NoticeItem {
 interface WidgetSettings {
   title: string;
   theme: 'light' | 'dark';
+  backgroundColor: string;
   showReadNotices: boolean;
   maxItems: number;
   pollInterval: number; // in minutes
@@ -38,6 +39,7 @@ export class SupanoticeWidget extends LitElement {
   private widgetSettings: WidgetSettings = {
     title: 'What\'s New',
     theme: 'light',
+    backgroundColor: '#4f46e5', // Default indigo color
     showReadNotices: true,
     maxItems: 10,
     pollInterval: 60
@@ -90,7 +92,7 @@ export class SupanoticeWidget extends LitElement {
 
   render() {
     return html`
-      <div class="container">
+      <div class="container" style="--background-color: ${this.widgetSettings.backgroundColor};">
         ${this.isOpen ? this.renderWidget() : ''}
         <button 
           class="bubble ${this.isOpen ? 'open' : ''}" 
@@ -183,7 +185,7 @@ export class SupanoticeWidget extends LitElement {
       width: 56px;
       height: 56px;
       border-radius: 50%;
-      background-color: #4f46e5;
+      background-color: var(--background-color, #4f46e5);
       color: white;
       border: none;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -192,16 +194,16 @@ export class SupanoticeWidget extends LitElement {
       align-items: center;
       justify-content: center;
       position: relative;
-      transition: transform 0.2s ease, background-color 0.2s ease;
+      transition: transform 0.2s ease, filter 0.2s ease;
     }
 
     .bubble:hover {
       transform: scale(1.05);
-      background-color: #4338ca;
+      filter: brightness(0.85);
     }
 
     .bubble.open {
-      background-color: #6b7280;
+      filter: brightness(0.75);
     }
 
     .badge {
@@ -235,14 +237,15 @@ export class SupanoticeWidget extends LitElement {
 
     header {
       padding: 16px 20px;
-      border-bottom: 1px solid #e5e7eb;
+      background-color: var(--background-color, #4f46e5);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     h2 {
       margin: 0;
       font-size: 18px;
       font-weight: 600;
-      color: #111827;
+      color: white;
     }
 
     .notice-list {

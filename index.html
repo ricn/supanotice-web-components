@@ -29,7 +29,7 @@
     </style>
   </head>
   <body>
-    <supanotice-widget></supanotice-widget>
+    <supanotice-widget widget-id="demo-widget"></supanotice-widget>
     <h1>SupanoticeWidget Component Demo</h1>
     
     <p>This page demonstrates the SupanoticeWidget component, which provides a floating notification bubble that shows product news and announcements.</p>
@@ -40,8 +40,13 @@
       
       <div class="example-code">
         <pre><code>&lt;script type="module" src="https://cdn.example.com/supanotice-widget.js"&gt;&lt;/script&gt;
-&lt;supanotice-widget&gt;&lt;/supanotice-widget&gt;</code></pre>
+&lt;supanotice-widget widget-id="your-widget-id"&gt;&lt;/supanotice-widget&gt;</code></pre>
       </div>
+      
+      <h2>Attributes</h2>
+      <ul>
+        <li><strong>widget-id</strong>: Set a unique identifier for your widget to fetch its configuration (required)</li>
+      </ul>
       
       <h2>Features</h2>
       <ul>

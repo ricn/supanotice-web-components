@@ -10,12 +10,39 @@ interface NoticeItem {
   read: boolean;
 }
 
+interface WidgetSettings {
+  title: string;
+  theme: 'light' | 'dark';
+  showReadNotices: boolean;
+  maxItems: number;
+  pollInterval: number; // in minutes
+}
+
 /**
  * A notification bubble component that displays in the bottom right corner
  * and opens a widget with product announcements when clicked.
  */
 @customElement('supanotice-widget')
 export class SupanoticeWidget extends LitElement {
+  /**
+   * The widget ID used to fetch configuration from the server.
+   */
+  @property({ type: String, attribute: 'widget-id' })
+  widgetId = 'default';
+
+  /**
+   * The widget settings loaded from the server based on widget-id.
+   * These are fake settings for now.
+   */
+  @state()
+  private widgetSettings: WidgetSettings = {
+    title: 'What\'s New',
+    theme: 'light',
+    showReadNotices: true,
+    maxItems: 10,
+    pollInterval: 60
+  };
+
   /**
    * The notification items to display in the widget.
    */
@@ -87,12 +114,15 @@ export class SupanoticeWidget extends LitElement {
     return html`
       <div class="widget" role="dialog" aria-labelledby="widget-title">
         <header>
-          <h2 id="widget-title">What's New</h2>
+          <h2 id="widget-title">${this.widgetSettings.title}</h2>
         </header>
         <div class="notice-list">
           ${this.notices.length === 0 
             ? html`<p class="empty">No announcements yet.</p>` 
-            : this.notices.map(notice => this.renderNotice(notice))
+            : this.notices
+                .filter(notice => this.widgetSettings.showReadNotices || !notice.read)
+                .slice(0, this.widgetSettings.maxItems)
+                .map(notice => this.renderNotice(notice))
           }
         </div>
       </div>

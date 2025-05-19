@@ -179,9 +179,11 @@ export class SupanoticeWidget extends LitElement {
       display: flex;
       flex-direction: column;
       align-items: flex-end;
+      pointer-events: none;
     }
 
     .bubble {
+      pointer-events: auto;
       width: 56px;
       height: 56px;
       border-radius: 50%;
@@ -225,14 +227,19 @@ export class SupanoticeWidget extends LitElement {
 
     .widget {
       width: 460px;
-      max-height: 700px;
+      height: calc(100vh - 100px);
+      max-height: 80vh;
       background-color: white;
       border-radius: 12px;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
       margin-bottom: 16px;
+      margin-top: 20px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      position: fixed;
+      right: 20px;
+      bottom: 96px;
     }
 
     header {
@@ -255,6 +262,7 @@ export class SupanoticeWidget extends LitElement {
       display: flex;
       flex-direction: column;
       gap: 16px;
+      scrollbar-width: thin;
     }
 
     .notice-item {
@@ -327,6 +335,9 @@ export class SupanoticeWidget extends LitElement {
       .widget {
         width: 100%;
         max-width: calc(100vw - 40px);
+        height: calc(100vh - 100px);
+        right: 50%;
+        transform: translateX(50%);
       }
     }
   `;

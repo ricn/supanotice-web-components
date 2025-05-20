@@ -5,11 +5,10 @@ interface PublicationItem {
   id: string;
   title: string;
   body: string;
-  fullBody?: string; // Optional longer text for expanded view
+  fullBody: string; // Optional longer text for expanded view
   image?: string; // URL to the image
   date: string;
   labels: string[];
-  // read status is now managed via localStorage instead of on the object
 }
 
 interface WidgetSettings {
@@ -209,7 +208,7 @@ export class SupanoticeWidget extends LitElement {
         </div>
         ${publication.image ? html`
           <div class="publication-image" @click=${() => this.startTrackingPublication(publication.id)}>
-            <img src="${publication.image}" alt="${publication.title || 'Publication image'}" />
+            <img src="${publication.image as string}" alt="${publication.title || 'Publication image'}" />
           </div>
         ` : ''}
         <div class="publication-content" @click=${() => this.startTrackingPublication(publication.id)}>

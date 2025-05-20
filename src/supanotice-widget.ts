@@ -1,10 +1,12 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 
-interface NoticeItem {
+interface PublicationItem {
   id: string;
   title: string;
   body: string;
+  fullBody?: string; // Optional longer text for expanded view
+  image?: string; // URL to the image
   date: string;
   labels: string[];
   read: boolean;
@@ -51,11 +53,13 @@ export class SupanoticeWidget extends LitElement {
    * The notification items to display in the widget.
    */
   @property({ type: Array })
-  notices: NoticeItem[] = [
+  publications: PublicationItem[] = [
     {
       id: '1',
       title: 'New Feature: Dark Mode',
-      body: 'We\'ve just released dark mode! Enable it in your settings to try it out.',
+      body: 'We\'ve just released dark mode! Enable it in your settings to try it out. Our new dark mode is designed to reduce eye strain and save battery life on devices with OLED screens...',
+      fullBody: 'We\'ve just released dark mode! Enable it in your settings to try it out. Our new dark mode is designed to reduce eye strain and save battery life on devices with OLED screens. \n\nThe new interface features carefully selected color contrast ratios to ensure readability while maintaining a sleek, modern look. We\'ve also included automatic switching based on your system preferences or time of day.\n\nOur design team spent months perfecting every detail of this implementation, from the subtle shadows to the perfect text contrast. We hope you enjoy this new feature as much as we do!',
+      image: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
       date: '2025-05-15',
       labels: ['feature', 'ui'],
       read: false
@@ -63,7 +67,9 @@ export class SupanoticeWidget extends LitElement {
     {
       id: '2',
       title: 'Performance Improvements',
-      body: 'We\'ve made several performance improvements to speed up your experience.',
+      body: 'We\'ve made several performance improvements to speed up your experience. Our latest update includes significant backend optimizations that make the application respond up to 40% faster...',
+      fullBody: 'We\'ve made several performance improvements to speed up your experience. Our latest update includes significant backend optimizations that make the application respond up to 40% faster.\n\nKey improvements include:\n\n• Optimized database queries\n• Implemented smart caching for frequently accessed data\n• Reduced JavaScript bundle size by 30%\n• Improved image loading with progressive techniques\n\nThese changes should be particularly noticeable for users with slower internet connections or older devices. We\'re committed to making our application accessible to all users regardless of their hardware capabilities.',
+      image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
       date: '2025-05-10',
       labels: ['update', 'performance'],
       read: false
@@ -71,7 +77,9 @@ export class SupanoticeWidget extends LitElement {
     {
       id: '3',
       title: 'Upcoming Maintenance',
-      body: 'We\'ll be performing maintenance on May 25th from 2-4am UTC. Expect brief service interruptions.',
+      body: 'We\'ll be performing maintenance on May 25th from 2-4am UTC. Expect brief service interruptions. This maintenance window is necessary to upgrade our infrastructure to support new features...',
+      fullBody: 'We\'ll be performing maintenance on May 25th from 2-4am UTC. Expect brief service interruptions. This maintenance window is necessary to upgrade our infrastructure to support new features.\n\nDuring this time, we\'ll be:\n\n• Upgrading our database servers to the latest version\n• Implementing enhanced security measures\n• Scaling our hosting infrastructure to handle increased traffic\n• Installing new monitoring tools to help us identify and fix issues faster\n\nWe\'ve chosen this time slot to minimize disruption for most of our users. If you have any concerns about this maintenance window, please contact our support team.',
+      image: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
       date: '2025-05-05',
       labels: ['maintenance', 'downtime'],
       read: true
@@ -83,7 +91,7 @@ export class SupanoticeWidget extends LitElement {
    */
   @property({ type: Number })
   get unreadCount(): number {
-    return this.notices.filter(notice => !notice.read).length;
+    return this.publications.filter(publication => !publication.read).length;
   }
 
   /**
@@ -91,6 +99,9 @@ export class SupanoticeWidget extends LitElement {
    */
   @state()
   private isOpen = false;
+
+  @state()
+  private expandedPublications: Set<string> = new Set();
 
   render() {
     return html`
@@ -144,32 +155,51 @@ export class SupanoticeWidget extends LitElement {
             </svg>
           </button>
         </header>
-        <div class="notice-list">
-          ${this.notices.length === 0 
-            ? html`<p class="empty">No announcements yet.</p>` 
-            : this.notices
-                .filter(notice => this.widgetSettings.showReadNotices || !notice.read)
+        <div class="publication-list">
+              ${this.publications.length === 0 ? 
+                html`<div class="empty">No publications available</div>` :
+                this.publications
+                .filter(publication => this.widgetSettings.showReadNotices || !publication.read)
                 .slice(0, this.widgetSettings.maxItems)
-                .map(notice => this.renderNotice(notice))
+                .map(publication => this.renderPublication(publication))
           }
         </div>
+        <footer class="widget-footer">
+          <a href="https://supanotice.io" target="_blank" rel="noopener noreferrer" class="supanotice-link">Supanotice</a>
+        </footer>
       </div>
     `;
   }
 
-  private renderNotice(notice: NoticeItem) {
+  private renderPublication(publication: PublicationItem) {
+    const isExpanded = this.expandedPublications.has(publication.id);
+    const hasFullBody = !!publication.fullBody;
+    const bodyText = isExpanded && hasFullBody ? publication.fullBody : publication.body;
+    
     return html`
-      <div class="notice-item ${notice.read ? 'read' : 'unread'}" @click=${() => this._markAsRead(notice.id)}>
-        <div class="notice-top">
-          <div class="notice-labels">
-            ${notice.labels.map(label => html`<span class="label">${label}</span>`)}
+      <div class="publication-item ${publication.read ? 'read' : 'unread'} ${isExpanded ? 'expanded' : ''}">
+        <div class="publication-top" @click=${() => this._markAsRead(publication.id)}>
+          <div class="publication-labels">
+            ${publication.labels.map(label => html`<span class="label">${label}</span>`)}
           </div>
-          <span class="notice-date">${this._formatDate(notice.date)}</span>
+          <span class="publication-date">${this._formatDate(publication.date)}</span>
         </div>
-        <div class="notice-header">
-          <h3>${notice.title}</h3>
+        <div class="publication-header" @click=${() => this._markAsRead(publication.id)}>
+          <h3>${publication.title}</h3>
         </div>
-        <p class="notice-body">${notice.body}</p>
+        ${publication.image ? html`
+          <div class="publication-image" @click=${() => this._markAsRead(publication.id)}>
+            <img src="${publication.image}" alt="${publication.title || 'Publication image'}" />
+          </div>
+        ` : ''}
+        <div class="publication-content" @click=${() => this._markAsRead(publication.id)}>
+          <p class="publication-body">${this._formatBody(bodyText)}</p>
+          ${hasFullBody ? html`
+            <button @click=${(e: Event) => this._toggleExpand(e, publication.id)} class="read-more-btn">
+              ${isExpanded ? 'Read less' : 'Read more'}
+            </button>
+          ` : ''}
+        </div>
       </div>
     `;
   }
@@ -179,10 +209,34 @@ export class SupanoticeWidget extends LitElement {
   }
 
   private _markAsRead(id: string) {
-    this.notices = this.notices.map(notice => 
-      notice.id === id ? { ...notice, read: true } : notice
+    this.publications = this.publications.map(publication => 
+      publication.id === id ? { ...publication, read: true } : publication
     );
     this.requestUpdate();
+  }
+
+  private _toggleExpand(e: Event, id: string) {
+    e.stopPropagation(); // Prevent triggering _markAsRead
+    
+    if (this.expandedPublications.has(id)) {
+      this.expandedPublications.delete(id);
+    } else {
+      this.expandedPublications.add(id);
+    }
+    
+    this.requestUpdate();
+  }
+
+  private _formatBody(text: string): string[] | string {
+    if (!text) return '';
+    
+    // If text contains newlines, split it into paragraphs
+    if (text.includes('\n')) {
+      const paragraphs = text.split('\n\n');
+      return paragraphs.map(p => p.trim()).filter(p => p);
+    }
+    
+    return text;
   }
 
   private _formatDate(dateString: string): string {
@@ -309,7 +363,7 @@ export class SupanoticeWidget extends LitElement {
       transition: transform 0.2s ease;
     }
 
-    .notice-list {
+    .publication-list {
       flex: 1;
       overflow-y: auto;
       padding: 16px;
@@ -319,7 +373,7 @@ export class SupanoticeWidget extends LitElement {
       scrollbar-width: thin;
     }
 
-    .notice-item {
+    .publication-item {
       padding: 16px;
       border-radius: 8px;
       background-color: #f9fafb;
@@ -327,24 +381,24 @@ export class SupanoticeWidget extends LitElement {
       transition: transform 0.1s ease, box-shadow 0.1s ease;
     }
 
-    .notice-item.unread {
+    .publication-item.unread {
       background-color: #eff6ff;
       border-left: 3px solid #3b82f6;
     }
 
-    .notice-item:hover {
+    .publication-item:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
     }
 
-    .notice-top {
+    .publication-top {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 8px;
     }
 
-    .notice-header {
+    .publication-header {
       margin-bottom: 8px;
     }
 
@@ -355,19 +409,67 @@ export class SupanoticeWidget extends LitElement {
       color: #111827;
     }
 
-    .notice-date {
+    .publication-date {
       font-size: 12px;
       color: #6b7280;
     }
 
-    .notice-body {
+    .publication-body {
       margin: 0 0 12px 0;
       font-size: 14px;
       line-height: 1.5;
       color: #374151;
+      white-space: pre-line;
+    }
+    
+    .publication-image {
+      margin: 0 0 12px 0;
+      width: 100%;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    
+    .publication-image img {
+      width: 100%;
+      height: auto;
+      display: block;
+      transition: transform 0.3s ease;
+    }
+    
+    .publication-item:hover .publication-image img {
+      transform: scale(1.02);
+    }
+    
+    .publication-content {
+      position: relative;
+    }
+    
+    .read-more-btn {
+      background: none;
+      border: none;
+      color: #4f46e5;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 0;
+      cursor: pointer;
+      margin-top: 4px;
+      text-decoration: underline;
+      transition: color 0.2s ease;
+    }
+    
+    .read-more-btn:hover {
+      color: #4338ca;
+    }
+    
+    .publication-item {
+      transition: all 0.3s ease;
+    }
+    
+    .publication-item.expanded {
+      padding-bottom: 24px;
     }
 
-    .notice-labels {
+    .publication-labels {
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
@@ -386,6 +488,24 @@ export class SupanoticeWidget extends LitElement {
       color: #6b7280;
       font-size: 14px;
       padding: 24px;
+    }
+    
+    .widget-footer {
+      padding: 12px 16px;
+      border-top: 1px solid #e5e7eb;
+      text-align: center;
+      font-size: 12px;
+    }
+    
+    .supanotice-link {
+      color: #6b7280;
+      text-decoration: none;
+      transition: color 0.2s ease;
+      font-weight: 500;
+    }
+    
+    .supanotice-link:hover {
+      color: #4f46e5;
     }
 
     /* Responsive adjustments */

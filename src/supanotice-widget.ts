@@ -13,12 +13,9 @@ interface PublicationItem {
 
 interface WidgetSettings {
   title: string;
-  theme: 'light' | 'dark';
   backgroundColor: string;
-  iconColor: string;
-  showReadNotices: boolean;
+  color: string;
   maxItems: number;
-  pollInterval: number; // in minutes
 }
 
 /**
@@ -40,12 +37,9 @@ export class SupanoticeWidget extends LitElement {
   @state()
   private widgetSettings: WidgetSettings = {
     title: 'What\'s New',
-    theme: 'light',
     backgroundColor: '#4f46e5', // Default indigo color
-    iconColor: '#ffffff', // White color for icons
-    showReadNotices: true,
-    maxItems: 10,
-    pollInterval: 60
+    color: '#ffffff', // White color for icons and text
+    maxItems: 10
   };
 
   /**
@@ -118,7 +112,7 @@ export class SupanoticeWidget extends LitElement {
 
   render() {
     return html`
-      <div class="container" style="--background-color: ${this.widgetSettings.backgroundColor}; --icon-color: ${this.widgetSettings.iconColor};">
+      <div class="container" style="--background-color: ${this.widgetSettings.backgroundColor}; --color: ${this.widgetSettings.color};">
         ${this.isOpen ? this.renderWidget() : ''}
         <button 
           class="bubble ${this.isOpen ? 'open' : ''}" 
@@ -173,7 +167,6 @@ export class SupanoticeWidget extends LitElement {
               ${this.publications.length === 0 ? 
                 html`<div class="empty">No publications available</div>` :
                 this.publications
-                .filter(publication => this.widgetSettings.showReadNotices || !this.isPublicationRead(publication.id))
                 .slice(0, this.widgetSettings.maxItems)
                 .map(publication => this.renderPublication(publication))
           }
@@ -440,7 +433,7 @@ export class SupanoticeWidget extends LitElement {
       margin: 0;
       font-size: 18px;
       font-weight: 600;
-      color: white;
+      color: var(--color, #ffffff);
     }
     
     .close-button {

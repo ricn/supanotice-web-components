@@ -9,7 +9,7 @@ interface PublicationItem {
   image?: string; // URL to the image
   date: string;
   labels: string[];
-  read: boolean;
+  // read status is now managed via localStorage instead of on the object
 }
 
 interface WidgetSettings {
@@ -61,8 +61,7 @@ export class SupanoticeWidget extends LitElement {
       fullBody: 'We\'ve just released dark mode! Enable it in your settings to try it out. Our new dark mode is designed to reduce eye strain and save battery life on devices with OLED screens. \n\nThe new interface features carefully selected color contrast ratios to ensure readability while maintaining a sleek, modern look. We\'ve also included automatic switching based on your system preferences or time of day.\n\nOur design team spent months perfecting every detail of this implementation, from the subtle shadows to the perfect text contrast. We hope you enjoy this new feature as much as we do!',
       image: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
       date: '2025-05-15',
-      labels: ['feature', 'ui'],
-      read: false
+      labels: ['feature', 'ui']
     },
     {
       id: '2',
@@ -71,8 +70,7 @@ export class SupanoticeWidget extends LitElement {
       fullBody: 'We\'ve made several performance improvements to speed up your experience. Our latest update includes significant backend optimizations that make the application respond up to 40% faster.\n\nKey improvements include:\n\n• Optimized database queries\n• Implemented smart caching for frequently accessed data\n• Reduced JavaScript bundle size by 30%\n• Improved image loading with progressive techniques\n\nThese changes should be particularly noticeable for users with slower internet connections or older devices. We\'re committed to making our application accessible to all users regardless of their hardware capabilities.',
       image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
       date: '2025-05-10',
-      labels: ['update', 'performance'],
-      read: false
+      labels: ['update', 'performance']
     },
     {
       id: '3',
@@ -81,17 +79,33 @@ export class SupanoticeWidget extends LitElement {
       fullBody: 'We\'ll be performing maintenance on May 25th from 2-4am UTC. Expect brief service interruptions. This maintenance window is necessary to upgrade our infrastructure to support new features.\n\nDuring this time, we\'ll be:\n\n• Upgrading our database servers to the latest version\n• Implementing enhanced security measures\n• Scaling our hosting infrastructure to handle increased traffic\n• Installing new monitoring tools to help us identify and fix issues faster\n\nWe\'ve chosen this time slot to minimize disruption for most of our users. If you have any concerns about this maintenance window, please contact our support team.',
       image: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
       date: '2025-05-05',
-      labels: ['maintenance', 'downtime'],
-      read: true
+      labels: ['maintenance', 'downtime']
     }
   ];
+  
+  /**
+   * Local storage key for read publications
+   */
+  private readonly LOCAL_STORAGE_KEY = 'supanotice-read-publications';
+  
+  /**
+   * Map to track view times of publications
+   */
+  @state()
+  private publicationViewTimes: Map<string, number> = new Map();
+
+  /**
+   * Timer for tracking view duration
+   */
+  private viewTimer: number | null = null;
 
   /**
    * The number of unread notices.
    */
   @property({ type: Number })
   get unreadCount(): number {
-    return this.publications.filter(publication => !publication.read).length;
+    const readPublications = this.getReadPublications();
+    return this.publications.filter(publication => !readPublications.includes(publication.id)).length;
   }
 
   /**
@@ -140,6 +154,7 @@ export class SupanoticeWidget extends LitElement {
 
   private closeWidget() {
     this.isOpen = false;
+    this.clearViewTracking();
     this.requestUpdate();
   }
 
@@ -159,13 +174,13 @@ export class SupanoticeWidget extends LitElement {
               ${this.publications.length === 0 ? 
                 html`<div class="empty">No publications available</div>` :
                 this.publications
-                .filter(publication => this.widgetSettings.showReadNotices || !publication.read)
+                .filter(publication => this.widgetSettings.showReadNotices || !this.isPublicationRead(publication.id))
                 .slice(0, this.widgetSettings.maxItems)
                 .map(publication => this.renderPublication(publication))
           }
         </div>
         <footer class="widget-footer">
-          <a href="https://supanotice.io" target="_blank" rel="noopener noreferrer" class="supanotice-link">Supanotice</a>
+          <a href="https://supanotice.io" target="_blank" rel="noopener noreferrer" class="supanotice-link">supanotice.</a>
         </footer>
       </div>
     `;
@@ -175,24 +190,29 @@ export class SupanoticeWidget extends LitElement {
     const isExpanded = this.expandedPublications.has(publication.id);
     const hasFullBody = !!publication.fullBody;
     const bodyText = isExpanded && hasFullBody ? publication.fullBody : publication.body;
+    const isRead = this.isPublicationRead(publication.id);
+    
+    // We will track view time on mouse enter or touch instead of on render
     
     return html`
-      <div class="publication-item ${publication.read ? 'read' : 'unread'} ${isExpanded ? 'expanded' : ''}">
-        <div class="publication-top" @click=${() => this._markAsRead(publication.id)}>
+      <div class="publication-item ${isRead ? 'read' : 'unread'} ${isExpanded ? 'expanded' : ''}"
+           @mouseenter=${() => this.startTrackingPublication(publication.id)}
+           @touchstart=${() => this.startTrackingPublication(publication.id)}>
+        <div class="publication-top">
           <div class="publication-labels">
             ${publication.labels.map(label => html`<span class="label">${label}</span>`)}
           </div>
           <span class="publication-date">${this._formatDate(publication.date)}</span>
         </div>
-        <div class="publication-header" @click=${() => this._markAsRead(publication.id)}>
+        <div class="publication-header" @click=${() => this.startTrackingPublication(publication.id)}>
           <h3>${publication.title}</h3>
         </div>
         ${publication.image ? html`
-          <div class="publication-image" @click=${() => this._markAsRead(publication.id)}>
+          <div class="publication-image" @click=${() => this.startTrackingPublication(publication.id)}>
             <img src="${publication.image}" alt="${publication.title || 'Publication image'}" />
           </div>
         ` : ''}
-        <div class="publication-content" @click=${() => this._markAsRead(publication.id)}>
+        <div class="publication-content" @click=${() => this.startTrackingPublication(publication.id)}>
           <p class="publication-body">${this._formatBody(bodyText)}</p>
           ${hasFullBody ? html`
             <button @click=${(e: Event) => this._toggleExpand(e, publication.id)} class="read-more-btn">
@@ -206,17 +226,20 @@ export class SupanoticeWidget extends LitElement {
 
   private _toggleWidget() {
     this.isOpen = !this.isOpen;
+    
+    if (!this.isOpen) {
+      // Clear all tracking when widget is closed
+      this.clearViewTracking();
+    } else {
+      // Start tracking when widget is opened
+      this.startViewTracking();
+    }
   }
 
-  private _markAsRead(id: string) {
-    this.publications = this.publications.map(publication => 
-      publication.id === id ? { ...publication, read: true } : publication
-    );
-    this.requestUpdate();
-  }
+
 
   private _toggleExpand(e: Event, id: string) {
-    e.stopPropagation(); // Prevent triggering _markAsRead
+    e.stopPropagation(); // Prevent triggering parent click handlers
     
     if (this.expandedPublications.has(id)) {
       this.expandedPublications.delete(id);
@@ -245,6 +268,86 @@ export class SupanoticeWidget extends LitElement {
       month: 'short', 
       day: 'numeric' 
     }).format(date);
+  }
+  
+  /**
+   * Get read publications from localStorage
+   */
+  private getReadPublications(): string[] {
+    try {
+      const stored = localStorage.getItem(this.LOCAL_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch (err) {
+      console.error('Error accessing localStorage', err);
+      return [];
+    }
+  }
+  
+  /**
+   * Add a publication ID to the read list in localStorage
+   */
+  private addToReadPublications(id: string): void {
+    try {
+      const readPublications = this.getReadPublications();
+      if (!readPublications.includes(id)) {
+        readPublications.push(id);
+        localStorage.setItem(this.LOCAL_STORAGE_KEY, JSON.stringify(readPublications));
+      }
+    } catch (err) {
+      console.error('Error writing to localStorage', err);
+    }
+  }
+  
+  /**
+   * Check if publication is read
+   */
+  private isPublicationRead(id: string): boolean {
+    return this.getReadPublications().includes(id);
+  }
+  
+  /**
+   * Begin tracking view time for a specific publication
+   */
+  private startTrackingPublication(id: string): void {
+    if (!this.publicationViewTimes.has(id)) {
+      this.publicationViewTimes.set(id, Date.now());
+    }
+  }
+  
+  /**
+   * Start view tracking timer for all visible publications
+   */
+  private startViewTracking(): void {
+    // Clear any existing timer
+    this.clearViewTracking();
+    
+    // Set up a timer to check view duration every second
+    this.viewTimer = window.setInterval(() => {
+      const now = Date.now();
+      this.publicationViewTimes.forEach((startTime, id) => {
+        const viewDuration = now - startTime;
+        // If viewed for more than 3 seconds, mark as read
+        if (viewDuration > 3000) {
+          this.addToReadPublications(id);
+          // Remove from tracking after marking as read
+          this.publicationViewTimes.delete(id);
+        }
+      });
+      this.requestUpdate();
+    }, 1000);
+  }
+  
+
+  
+  /**
+   * Clear all view tracking
+   */
+  private clearViewTracking(): void {
+    if (this.viewTimer !== null) {
+      window.clearInterval(this.viewTimer);
+      this.viewTimer = null;
+    }
+    this.publicationViewTimes.clear();
   }
 
   static styles = css`

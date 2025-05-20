@@ -6,7 +6,7 @@ interface NoticeItem {
   title: string;
   body: string;
   date: string;
-  tags: string[];
+  labels: string[];
   read: boolean;
 }
 
@@ -57,7 +57,7 @@ export class SupanoticeWidget extends LitElement {
       title: 'New Feature: Dark Mode',
       body: 'We\'ve just released dark mode! Enable it in your settings to try it out.',
       date: '2025-05-15',
-      tags: ['feature', 'ui'],
+      labels: ['feature', 'ui'],
       read: false
     },
     {
@@ -65,7 +65,7 @@ export class SupanoticeWidget extends LitElement {
       title: 'Performance Improvements',
       body: 'We\'ve made several performance improvements to speed up your experience.',
       date: '2025-05-10',
-      tags: ['update', 'performance'],
+      labels: ['update', 'performance'],
       read: false
     },
     {
@@ -73,7 +73,7 @@ export class SupanoticeWidget extends LitElement {
       title: 'Upcoming Maintenance',
       body: 'We\'ll be performing maintenance on May 25th from 2-4am UTC. Expect brief service interruptions.',
       date: '2025-05-05',
-      tags: ['maintenance', 'downtime'],
+      labels: ['maintenance', 'downtime'],
       read: true
     }
   ];
@@ -160,14 +160,16 @@ export class SupanoticeWidget extends LitElement {
   private renderNotice(notice: NoticeItem) {
     return html`
       <div class="notice-item ${notice.read ? 'read' : 'unread'}" @click=${() => this._markAsRead(notice.id)}>
-        <div class="notice-header">
-          <h3>${notice.title}</h3>
+        <div class="notice-top">
+          <div class="notice-labels">
+            ${notice.labels.map(label => html`<span class="label">${label}</span>`)}
+          </div>
           <span class="notice-date">${this._formatDate(notice.date)}</span>
         </div>
-        <p class="notice-body">${notice.body}</p>
-        <div class="notice-tags">
-          ${notice.tags.map(tag => html`<span class="tag">${tag}</span>`)}
+        <div class="notice-header">
+          <h3>${notice.title}</h3>
         </div>
+        <p class="notice-body">${notice.body}</p>
       </div>
     `;
   }
@@ -335,10 +337,14 @@ export class SupanoticeWidget extends LitElement {
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
     }
 
-    .notice-header {
+    .notice-top {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .notice-header {
       margin-bottom: 8px;
     }
 
@@ -361,13 +367,13 @@ export class SupanoticeWidget extends LitElement {
       color: #374151;
     }
 
-    .notice-tags {
+    .notice-labels {
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
     }
 
-    .tag {
+    .label {
       font-size: 12px;
       padding: 4px 8px;
       border-radius: 9999px;

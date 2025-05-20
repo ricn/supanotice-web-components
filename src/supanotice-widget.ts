@@ -14,6 +14,7 @@ interface WidgetSettings {
   title: string;
   theme: 'light' | 'dark';
   backgroundColor: string;
+  iconColor: string;
   showReadNotices: boolean;
   maxItems: number;
   pollInterval: number; // in minutes
@@ -40,6 +41,7 @@ export class SupanoticeWidget extends LitElement {
     title: 'What\'s New',
     theme: 'light',
     backgroundColor: '#4f46e5', // Default indigo color
+    iconColor: '#ffffff', // White color for icons
     showReadNotices: true,
     maxItems: 10,
     pollInterval: 60
@@ -92,7 +94,7 @@ export class SupanoticeWidget extends LitElement {
 
   render() {
     return html`
-      <div class="container" style="--background-color: ${this.widgetSettings.backgroundColor};">
+      <div class="container" style="--background-color: ${this.widgetSettings.backgroundColor}; --icon-color: ${this.widgetSettings.iconColor};">
         ${this.isOpen ? this.renderWidget() : ''}
         <button 
           class="bubble ${this.isOpen ? 'open' : ''}" 
@@ -101,15 +103,33 @@ export class SupanoticeWidget extends LitElement {
           aria-expanded=${this.isOpen}
         >
           ${this.unreadCount > 0 ? html`<span class="badge">${this.unreadCount}</span>` : ''}
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            ${this.isOpen 
-              ? html`<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>` 
-              : html`<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>`
+          ${this.isOpen 
+              ? html`
+                <!-- X icon when open -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" fill="none"></circle>
+                  <line x1="15" y1="9" x2="9" y2="15"></line>
+                  <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
+              ` 
+              : html`
+                <!-- News/announcement icon when closed -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="7" y1="8" x2="17" y2="8"></line>
+                  <line x1="7" y1="12" x2="17" y2="12"></line>
+                  <line x1="7" y1="16" x2="17" y2="16"></line>
+                </svg>
+              `
             }
-          </svg>
         </button>
       </div>
     `;
+  }
+
+  private closeWidget() {
+    this.isOpen = false;
+    this.requestUpdate();
   }
 
   private renderWidget() {
@@ -117,6 +137,12 @@ export class SupanoticeWidget extends LitElement {
       <div class="widget" role="dialog" aria-labelledby="widget-title">
         <header>
           <h2 id="widget-title">${this.widgetSettings.title}</h2>
+          <button class="close-button" @click=${() => this.closeWidget()} aria-label="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
         </header>
         <div class="notice-list">
           ${this.notices.length === 0 
@@ -226,6 +252,7 @@ export class SupanoticeWidget extends LitElement {
     }
 
     .widget {
+      pointer-events: auto; /* Make widget clickable */
       width: 460px;
       height: calc(100vh - 100px);
       max-height: 80vh;
@@ -246,6 +273,9 @@ export class SupanoticeWidget extends LitElement {
       padding: 16px 20px;
       background-color: var(--background-color, #4f46e5);
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     h2 {
@@ -253,6 +283,28 @@ export class SupanoticeWidget extends LitElement {
       font-size: 18px;
       font-weight: 600;
       color: white;
+    }
+    
+    .close-button {
+      pointer-events: auto; /* Make sure it's clickable */
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: background-color 0.2s ease;
+    }
+    
+    .close-button:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .feather {
+      transition: transform 0.2s ease;
     }
 
     .notice-list {

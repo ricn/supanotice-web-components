@@ -18,6 +18,12 @@ interface WidgetSettings {
   maxItems: number;
 }
 
+interface WidgetApiResponse {
+  title: string;
+  color: string;
+  background_color: string;
+}
+
 /**
  * A notification bubble component that displays in the bottom right corner
  * and opens a widget with product announcements when clicked.
@@ -32,7 +38,6 @@ export class SupanoticeWidget extends LitElement {
 
   /**
    * The widget settings loaded from the server based on widget-id.
-   * These are fake settings for now.
    */
   @state()
   private widgetSettings: WidgetSettings = {
@@ -41,6 +46,18 @@ export class SupanoticeWidget extends LitElement {
     color: '#ffffff', // White color for icons and text
     maxItems: 10
   };
+
+  /**
+   * Indicates if the widget configuration is currently loading
+   */
+  @state()
+  private isLoading = false;
+
+  /**
+   * Error message if configuration loading fails
+   */
+  @state()
+  private errorMessage: string | null = null;
 
   /**
    * The notification items to display in the widget.
@@ -93,6 +110,47 @@ export class SupanoticeWidget extends LitElement {
   private viewTimer: number | null = null;
 
   /**
+   * Lifecycle callback when element is connected to DOM
+   */
+  connectedCallback() {
+    super.connectedCallback();
+    this.fetchWidgetConfiguration();
+  }
+
+  /**
+   * Fetches widget configuration from the API
+   */
+  async fetchWidgetConfiguration() {
+    if (!this.widgetId) return;
+    
+    this.isLoading = true;
+    this.errorMessage = null;
+    
+    try {
+      const response = await fetch(`http://localhost:4000/api/v1/widgets/${this.widgetId}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch widget configuration: ${response.statusText}`);
+      }
+      
+      const data: WidgetApiResponse = await response.json();
+      
+      // Map the API response to our internal format
+      this.widgetSettings = {
+        ...this.widgetSettings,
+        title: data.title || this.widgetSettings.title,
+        color: data.color || this.widgetSettings.color,
+        backgroundColor: data.background_color || this.widgetSettings.backgroundColor
+      };
+    } catch (error) {
+      console.error('Error fetching widget configuration:', error);
+      this.errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  /**
    * The number of unread notices.
    */
   @property({ type: Number })
@@ -113,6 +171,8 @@ export class SupanoticeWidget extends LitElement {
   render() {
     return html`
       <div class="container" style="--background-color: ${this.widgetSettings.backgroundColor}; --color: ${this.widgetSettings.color};">
+        ${this.isLoading ? html`<div class="loading">Loading widget configuration...</div>` : ''}
+        ${this.errorMessage ? html`<div class="error">${this.errorMessage}</div>` : ''}
         ${this.isOpen ? this.renderWidget() : ''}
         <button 
           class="bubble ${this.isOpen ? 'open' : ''}" 
@@ -344,6 +404,7 @@ export class SupanoticeWidget extends LitElement {
 
   static styles = css`
     :host {
+      --bubble-size: 4rem;
       display: block;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     }

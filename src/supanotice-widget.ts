@@ -1,14 +1,19 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 
+interface Label {
+  id: string;
+  name: string;
+}
+
 interface PublicationItem {
   id: string;
   title: string;
   body: string;
-  fullBody: string; // Optional longer text for expanded view
+  fullBody?: string; // Optional longer text for expanded view
   image?: string; // URL to the image
-  date: string;
-  labels: string[];
+  published_at: string; // ISO date string
+  labels: Label[];
 }
 
 interface WidgetSettings {
@@ -22,6 +27,7 @@ interface WidgetApiResponse {
   title: string;
   color: string;
   background_color: string;
+  publications: PublicationItem[];
 }
 
 /**
@@ -62,36 +68,8 @@ export class SupanoticeWidget extends LitElement {
   /**
    * The notification items to display in the widget.
    */
-  @property({ type: Array })
-  publications: PublicationItem[] = [
-    {
-      id: '1',
-      title: 'New Feature: Dark Mode',
-      body: 'We\'ve just released dark mode! Enable it in your settings to try it out. Our new dark mode is designed to reduce eye strain and save battery life on devices with OLED screens...',
-      fullBody: 'We\'ve just released dark mode! Enable it in your settings to try it out. Our new dark mode is designed to reduce eye strain and save battery life on devices with OLED screens. \n\nThe new interface features carefully selected color contrast ratios to ensure readability while maintaining a sleek, modern look. We\'ve also included automatic switching based on your system preferences or time of day.\n\nOur design team spent months perfecting every detail of this implementation, from the subtle shadows to the perfect text contrast. We hope you enjoy this new feature as much as we do!',
-      image: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
-      date: '2025-05-15',
-      labels: ['feature', 'ui']
-    },
-    {
-      id: '2',
-      title: 'Performance Improvements',
-      body: 'We\'ve made several performance improvements to speed up your experience. Our latest update includes significant backend optimizations that make the application respond up to 40% faster...',
-      fullBody: 'We\'ve made several performance improvements to speed up your experience. Our latest update includes significant backend optimizations that make the application respond up to 40% faster.\n\nKey improvements include:\n\n• Optimized database queries\n• Implemented smart caching for frequently accessed data\n• Reduced JavaScript bundle size by 30%\n• Improved image loading with progressive techniques\n\nThese changes should be particularly noticeable for users with slower internet connections or older devices. We\'re committed to making our application accessible to all users regardless of their hardware capabilities.',
-      image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
-      date: '2025-05-10',
-      labels: ['update', 'performance']
-    },
-    {
-      id: '3',
-      title: 'Upcoming Maintenance',
-      body: 'We\'ll be performing maintenance on May 25th from 2-4am UTC. Expect brief service interruptions. This maintenance window is necessary to upgrade our infrastructure to support new features...',
-      fullBody: 'We\'ll be performing maintenance on May 25th from 2-4am UTC. Expect brief service interruptions. This maintenance window is necessary to upgrade our infrastructure to support new features.\n\nDuring this time, we\'ll be:\n\n• Upgrading our database servers to the latest version\n• Implementing enhanced security measures\n• Scaling our hosting infrastructure to handle increased traffic\n• Installing new monitoring tools to help us identify and fix issues faster\n\nWe\'ve chosen this time slot to minimize disruption for most of our users. If you have any concerns about this maintenance window, please contact our support team.',
-      image: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
-      date: '2025-05-05',
-      labels: ['maintenance', 'downtime']
-    }
-  ];
+  @state()
+  private publications: PublicationItem[] = [];
   
   /**
    * Local storage key for read publications
@@ -142,6 +120,11 @@ export class SupanoticeWidget extends LitElement {
         color: data.color || this.widgetSettings.color,
         backgroundColor: data.background_color || this.widgetSettings.backgroundColor
       };
+      
+      // Update publications from the API response
+      if (data.publications) {
+        this.publications = data.publications;
+      }
     } catch (error) {
       console.error('Error fetching widget configuration:', error);
       this.errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -252,9 +235,9 @@ export class SupanoticeWidget extends LitElement {
            @touchstart=${() => this.startTrackingPublication(publication.id)}>
         <div class="publication-top">
           <div class="publication-labels">
-            ${publication.labels.map(label => html`<span class="label">${label}</span>`)}
+            ${publication.labels.map(label => html`<span class="label">${label.name}</span>`)}
           </div>
-          <span class="publication-date">${this._formatDate(publication.date)}</span>
+          <span class="publication-date">${this._formatDate(publication.published_at)}</span>
         </div>
         <div class="publication-header" @click=${() => this.startTrackingPublication(publication.id)}>
           <h3>${publication.title}</h3>
@@ -265,7 +248,7 @@ export class SupanoticeWidget extends LitElement {
           </div>
         ` : ''}
         <div class="publication-content" @click=${() => this.startTrackingPublication(publication.id)}>
-          <p class="publication-body">${this._formatBody(bodyText)}</p>
+          <div class="publication-body" .innerHTML=${bodyText}></div>
           ${hasFullBody ? html`
             <button @click=${(e: Event) => this._toggleExpand(e, publication.id)} class="read-more-btn">
               ${isExpanded ? 'Read less' : 'Read more'}
@@ -302,19 +285,11 @@ export class SupanoticeWidget extends LitElement {
     this.requestUpdate();
   }
 
-  private _formatBody(text: string): string[] | string {
-    if (!text) return '';
-    
-    // If text contains newlines, split it into paragraphs
-    if (text.includes('\n')) {
-      const paragraphs = text.split('\n\n');
-      return paragraphs.map(p => p.trim()).filter(p => p);
-    }
-    
-    return text;
-  }
+
 
   private _formatDate(dateString: string): string {
+    if (!dateString) return '';
+    
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('en-US', { 
       month: 'short', 
@@ -490,7 +465,7 @@ export class SupanoticeWidget extends LitElement {
       align-items: center;
     }
 
-    h2 {
+    #widget-title {
       margin: 0;
       font-size: 18px;
       font-weight: 600;
@@ -564,6 +539,14 @@ export class SupanoticeWidget extends LitElement {
       font-weight: 600;
       color: #111827;
     }
+
+    h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+    }
+
 
     .publication-date {
       font-size: 12px;

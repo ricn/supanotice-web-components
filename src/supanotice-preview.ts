@@ -14,7 +14,7 @@ export class SupanoticePreview extends LitElement {
    * Whether the preview is in dark mode
    */
   @state()
-  private isDarkMode = true;
+  private isDarkMode = false;
 
   /**
    * Toggle between dark and light mode

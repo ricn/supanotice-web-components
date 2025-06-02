@@ -10,9 +10,10 @@
     <style>
       body {
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-        max-width: 800px;
+        max-width: 1200px;
         margin: 0 auto;
         padding: 20px;
+        color: #111827;
       }
       .content {
         height: 150vh;
@@ -26,17 +27,70 @@
       .example-code {
         margin: 40px 0;
       }
+      .tabs {
+        display: flex;
+        gap: 2px;
+        margin: 40px 0 20px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .tab {
+        padding: 12px 24px;
+        border: none;
+        background: none;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 500;
+        color: #6b7280;
+        border-bottom: 2px solid transparent;
+      }
+      .tab.active {
+        color: #3b82f6;
+        border-bottom: 2px solid #3b82f6;
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
+      .preview-section {
+        margin: 40px 0;
+      }
+      .preview-container {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-top: 20px;
+      }
     </style>
   </head>
   <body>
+    <!-- The widget is still available in the bottom right for actual usage -->
     <supanotice-widget widget-id="59e83c43-29fd-4e93-a97a-828d153e36fe"></supanotice-widget>
-    <h1>SupanoticeWidget Component Demo</h1>
     
-    <p>This page demonstrates the SupanoticeWidget component, which provides a floating notification bubble that shows product news and announcements.</p>
+    <h1>SupanoticeWidget Components Demo</h1>
     
-    <div class="content">
-      <h2>How to Use</h2>
-      <p>Simply add the following script to your HTML:</p>
+    <div class="tabs">
+      <button class="tab active" data-tab="preview">Widget Preview</button>
+      <button class="tab" data-tab="usage">Usage Guide</button>
+    </div>
+    
+    <div class="tab-content active" id="preview">
+      <div class="preview-section">
+        <h2>Widget Preview</h2>
+        <p>This preview allows you to see how the widget appears in different themes. Use the controls to toggle between dark and light modes, and reset the widget state.</p>
+        
+        <div class="preview-container">
+          <supanotice-preview>
+            <supanotice-widget widget-id="59e83c43-29fd-4e93-a97a-828d153e36fe" preview-mode></supanotice-widget>
+          </supanotice-preview>
+        </div>
+      </div>
+    </div>
+    
+    <div class="tab-content" id="usage">
+      <h2>How to Use SupanoticeWidget</h2>
+      <p>The SupanoticeWidget component provides a floating notification bubble that shows product news and announcements.</p>
       
       <div class="example-code">
         <pre><code>&lt;script type="module" src="https://cdn.example.com/supanotice-widget.js"&gt;&lt;/script&gt;
@@ -56,14 +110,46 @@
         <li>Support for tagging and marking notifications as read</li>
       </ul>
       
-      <p>Scroll down to see that the bubble stays fixed in the bottom corner!</p>
+      <h2>Preview Component</h2>
+      <p>Additionally, we provide a preview component that can be used for testing and demonstration purposes:</p>
       
-      <div style="height: 500px;"></div>
+      <div class="example-code">
+        <pre><code>&lt;supanotice-preview&gt;
+  &lt;supanotice-widget widget-id="your-widget-id" preview-mode&gt;&lt;/supanotice-widget&gt;
+&lt;/supanotice-preview&gt;</code></pre>
+      </div>
       
-      <h2>More content below</h2>
-      <p>The bubble follows as you scroll, making it always accessible to your users.</p>
+      <p>The preview component allows you to:</p>
+      <ul>
+        <li>Toggle between light and dark themes</li>
+        <li>Reset widget states (clear read notifications)</li>
+        <li>View the widget in a contained environment</li>
+      </ul>
     </div>
     
     <!-- The notification component -->
   </body>
+  
+  <script>
+    // Tab navigation functionality
+    document.addEventListener('DOMContentLoaded', () => {
+      const tabs = document.querySelectorAll('.tab');
+      const tabContents = document.querySelectorAll('.tab-content');
+      
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          // Remove active class from all tabs and contents
+          tabs.forEach(t => t.classList.remove('active'));
+          tabContents.forEach(content => content.classList.remove('active'));
+          
+          // Add active class to clicked tab
+          tab.classList.add('active');
+          
+          // Show corresponding content
+          const tabId = tab.getAttribute('data-tab');
+          document.getElementById(tabId).classList.add('active');
+        });
+      });
+    });
+  </script>
 </html>

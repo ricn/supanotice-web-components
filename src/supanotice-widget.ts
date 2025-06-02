@@ -41,6 +41,13 @@ export class SupanoticeWidget extends LitElement {
    */
   @property({ type: String, attribute: 'widget-id' })
   widgetId = 'default';
+  
+  /**
+   * Whether the widget is being displayed in preview mode.
+   * This changes the positioning to work within a preview container.
+   */
+  @property({ type: Boolean, attribute: 'preview-mode' })
+  previewMode = false;
 
   /**
    * The widget settings loaded from the server based on widget-id.
@@ -394,6 +401,12 @@ export class SupanoticeWidget extends LitElement {
       align-items: flex-end;
       pointer-events: none;
     }
+    
+    :host([preview-mode]) .container {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+    }
 
     .bubble {
       pointer-events: auto;
@@ -454,6 +467,15 @@ export class SupanoticeWidget extends LitElement {
       position: fixed;
       right: 20px;
       bottom: 96px;
+    }
+    
+    :host([preview-mode]) .widget {
+      position: absolute;
+      height: auto;
+      max-height: 350px; /* Better size for preview context */
+      width: 350px; /* Slightly smaller for preview */
+      bottom: 96px;
+      right: 20px;
     }
 
     header {

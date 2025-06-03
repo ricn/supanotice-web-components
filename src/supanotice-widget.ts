@@ -50,6 +50,12 @@ export class SupanoticeWidget extends LitElement {
   previewMode = false;
 
   /**
+   * The refresh key that triggers a reload of the widget configuration when changed.
+   */
+  @property({ type: String, attribute: 'refresh-key' })
+  refreshKey = '';
+
+  /**
    * The widget settings loaded from the server based on widget-id.
    */
   @state()
@@ -100,6 +106,17 @@ export class SupanoticeWidget extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.fetchWidgetConfiguration();
+  }
+
+  /**
+   * Called when an observed property changes.
+   * Detects changes to the refresh-key property and reloads the configuration.
+   */
+  updated(changedProperties: Map<string, any>) {
+    if (changedProperties.has('refreshKey')) {
+      // If refresh-key changed, reload the widget configuration
+      this.fetchWidgetConfiguration();
+    }
   }
 
   /**

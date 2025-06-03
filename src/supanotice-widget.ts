@@ -489,9 +489,9 @@ export class SupanoticeWidget extends LitElement {
     :host([preview-mode]) .widget {
       position: absolute;
       height: auto;
-      max-height: 350px; /* Better size for preview context */
-      width: 350px; /* Slightly smaller for preview */
-      bottom: 96px;
+      max-height: 400px; /* Better size for preview context */
+      width: 400px; /* Slightly smaller for preview */
+      bottom: 50px;
       right: 20px;
     }
 

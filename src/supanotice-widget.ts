@@ -262,7 +262,7 @@ export class SupanoticeWidget extends LitElement {
           }
         </div>
         <footer class="widget-footer">
-          <a href="https://supanotice.com" target="_blank" rel="noopener noreferrer" class="supanotice-link">supanotice.</a>
+          Powered by <a href="https://supanotice.com" target="_blank" rel="noopener noreferrer" class="supanotice-link">Supanotice</a>
         </footer>
       </div>
     `;
@@ -875,14 +875,14 @@ export class SupanoticeWidget extends LitElement {
     }
     
     .supanotice-link {
-      color: #6b7280;
+      color: #3b82f6;
       text-decoration: none;
       transition: color 0.2s ease;
       font-weight: 500;
     }
     
     .supanotice-link:hover {
-      color: #4f46e5;
+      color: #1d4ed8;
     }
 
     /* Blockquote styling */

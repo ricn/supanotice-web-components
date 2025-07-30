@@ -58,6 +58,13 @@ export class SupanoticeWidget extends LitElement {
   refreshKey = '';
 
   /**
+   * The API endpoint URL for fetching widget configuration.
+   * Defaults to production URL but can be overridden for local development.
+   */
+  @property({ type: String, attribute: 'api-endpoint' })
+  apiEndpoint = 'https://supanotice.com';
+
+  /**
    * The widget settings loaded from the server based on widget-id.
    */
   @state()
@@ -134,7 +141,7 @@ export class SupanoticeWidget extends LitElement {
     this.errorMessage = null;
     
     try {
-      const response = await fetch(`http://localhost:4000/api/v1/widgets/${this.widgetId}`);
+      const response = await fetch(`${this.apiEndpoint}/api/v1/widgets/${this.widgetId}`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch widget configuration: ${response.statusText}`);

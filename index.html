@@ -66,7 +66,7 @@
   </head>
   <body>
     <!-- The widget is still available in the bottom right for actual usage -->
-    <supanotice-widget widget-id="59e83c43-29fd-4e93-a97a-828d153e36fe"></supanotice-widget>
+    <supanotice-widget widget-id="59e83c43-29fd-4e93-a97a-828d153e36fe" api-endpoint="http://localhost:4000"></supanotice-widget>
     
     <h1>SupanoticeWidget Components Demo</h1>
     
@@ -82,7 +82,7 @@
         
         <div class="preview-container">
           <supanotice-preview>
-            <supanotice-widget widget-id="59e83c43-29fd-4e93-a97a-828d153e36fe" preview-mode></supanotice-widget>
+            <supanotice-widget widget-id="59e83c43-29fd-4e93-a97a-828d153e36fe" preview-mode api-endpoint="http://localhost:4000"></supanotice-widget>
           </supanotice-preview>
         </div>
       </div>
@@ -93,13 +93,22 @@
       <p>The SupanoticeWidget component provides a floating notification bubble that shows product news and announcements.</p>
       
       <div class="example-code">
+        <h3>Production Usage</h3>
         <pre><code>&lt;script type="module" src="https://cdn.example.com/supanotice-widget.js"&gt;&lt;/script&gt;
 &lt;supanotice-widget widget-id="your-widget-id"&gt;&lt;/supanotice-widget&gt;</code></pre>
+        
+        <h3>Local Development</h3>
+        <pre><code>&lt;supanotice-widget 
+  widget-id="your-widget-id" 
+  api-endpoint="http://localhost:4000"&gt;
+&lt;/supanotice-widget&gt;</code></pre>
       </div>
       
       <h2>Attributes</h2>
       <ul>
         <li><strong>widget-id</strong>: Set a unique identifier for your widget to fetch its configuration (required)</li>
+        <li><strong>api-endpoint</strong>: Override the API endpoint URL (optional, defaults to https://supanotice.com)</li>
+        <li><strong>preview-mode</strong>: Enable preview mode for use within containers (optional)</li>
       </ul>
       
       <h2>Features</h2>

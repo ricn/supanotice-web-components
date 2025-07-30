@@ -21,6 +21,7 @@ interface WidgetSettings {
   backgroundColor: string;
   color: string;
   maxItems: number;
+  newspage_url?: string | null;
 }
 
 interface WidgetApiResponse {
@@ -28,6 +29,7 @@ interface WidgetApiResponse {
   color: string;
   background_color: string;
   publications: PublicationItem[];
+  newspage_url?: string | null;
 }
 
 /**
@@ -142,7 +144,8 @@ export class SupanoticeWidget extends LitElement {
         ...this.widgetSettings,
         title: data.title || this.widgetSettings.title,
         color: data.color || this.widgetSettings.color,
-        backgroundColor: data.background_color || this.widgetSettings.backgroundColor
+        backgroundColor: data.background_color || this.widgetSettings.backgroundColor,
+        newspage_url: data.newspage_url || this.widgetSettings.newspage_url
       };
       
       // Update publications from the API response
@@ -218,11 +221,28 @@ export class SupanoticeWidget extends LitElement {
     this.requestUpdate();
   }
 
+  private openNewsPage() {
+    if (this.widgetSettings.newspage_url) {
+      window.open(this.widgetSettings.newspage_url, '_blank', 'noopener,noreferrer');
+    }
+  }
+
   private renderWidget() {
     return html`
       <div class="widget" role="dialog" aria-labelledby="widget-title">
         <header>
-          <h2 id="widget-title">${this.widgetSettings.title}</h2>
+          ${this.widgetSettings.newspage_url ? html`
+            <h2 id="widget-title" class="clickable-title" @click=${() => this.openNewsPage()}>
+              ${this.widgetSettings.title}
+              <svg class="external-link-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15,3 21,3 21,9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+            </h2>
+          ` : html`
+            <h2 id="widget-title">${this.widgetSettings.title}</h2>
+          `}
           <button class="close-button" @click=${() => this.closeWidget()} aria-label="Close">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -509,6 +529,28 @@ export class SupanoticeWidget extends LitElement {
       font-size: 18px;
       font-weight: 600;
       color: var(--color, #ffffff);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .external-link-icon {
+      opacity: 0.8;
+      transition: opacity 0.2s ease;
+      flex-shrink: 0;
+    }
+    
+    .external-link-icon:hover {
+      opacity: 1;
+    }
+    
+    .clickable-title {
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+    }
+    
+    .clickable-title:hover {
+      opacity: 0.9;
     }
     
     .close-button {

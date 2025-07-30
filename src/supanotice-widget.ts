@@ -119,6 +119,9 @@ export class SupanoticeWidget extends LitElement {
       // If refresh-key changed, reload the widget configuration
       this.fetchWidgetConfiguration();
     }
+    
+    // Setup attachment links after any update
+    this.setupAttachmentLinks();
   }
 
   /**
@@ -259,7 +262,7 @@ export class SupanoticeWidget extends LitElement {
           }
         </div>
         <footer class="widget-footer">
-          <a href="https://supanotice.io" target="_blank" rel="noopener noreferrer" class="supanotice-link">supanotice.</a>
+          <a href="https://supanotice.com" target="_blank" rel="noopener noreferrer" class="supanotice-link">supanotice.</a>
         </footer>
       </div>
     `;
@@ -278,13 +281,13 @@ export class SupanoticeWidget extends LitElement {
            @mouseenter=${() => this.startTrackingPublication(publication.id)}
            @touchstart=${() => this.startTrackingPublication(publication.id)}>
         <div class="publication-top">
-          <div class="publication-labels">
-            ${publication.labels.map(label => html`<span class="label">${label.name}</span>`)}
-          </div>
           <span class="publication-date">${this._formatDate(publication.published_at)}</span>
         </div>
         <div class="publication-header" @click=${() => this.startTrackingPublication(publication.id)}>
           <h3>${publication.title}</h3>
+          <div class="publication-labels">
+            ${publication.labels.map(label => html`<span class="label">${label.name}</span>`)}
+          </div>
         </div>
         ${publication.image ? html`
           <div class="publication-image" @click=${() => this.startTrackingPublication(publication.id)}>
@@ -312,6 +315,8 @@ export class SupanoticeWidget extends LitElement {
     } else {
       // Start tracking when widget is opened
       this.startViewTracking();
+      // Setup attachment links when widget opens
+      this.setupAttachmentLinks();
     }
   }
 
@@ -419,6 +424,33 @@ export class SupanoticeWidget extends LitElement {
       this.viewTimer = null;
     }
     this.publicationViewTimes.clear();
+  }
+
+  /**
+   * Setup attachment links to open in new tab
+   */
+  private setupAttachmentLinks(): void {
+    // Use a longer timeout to ensure DOM is fully rendered
+    setTimeout(() => {
+      // Try multiple selectors to catch all attachment links
+      const selectors = [
+        '.publication-body .attachment[href]',
+        '.publication-body a[href*=".jpg"]',
+        '.publication-body a[href*=".png"]',
+        '.publication-body a[href*=".jpeg"]',
+        '.publication-body figure a[href]'
+      ];
+      
+      selectors.forEach(selector => {
+        const links = this.shadowRoot?.querySelectorAll(selector) as NodeListOf<HTMLAnchorElement>;
+        links?.forEach(link => {
+          if (link.href && (link.href.includes('.jpg') || link.href.includes('.png') || link.href.includes('.jpeg') || link.classList.contains('attachment'))) {
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+          }
+        });
+      });
+    }, 100); // Increased timeout
   }
 
   static styles = css`
@@ -588,13 +620,14 @@ export class SupanoticeWidget extends LitElement {
     .publication-item {
       padding: 16px;
       border-radius: 8px;
-      background-color: #f9fafb;
+      background-color: white;
       cursor: pointer;
       transition: transform 0.1s ease, box-shadow 0.1s ease;
+      border: 1px solid #e5e7eb;
     }
 
     .publication-item.unread {
-      background-color: #eff6ff;
+      background-color: white;
       border-left: 3px solid #3b82f6;
     }
 
@@ -605,7 +638,7 @@ export class SupanoticeWidget extends LitElement {
 
     .publication-top {
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-end;
       align-items: center;
       margin-bottom: 8px;
     }
@@ -645,15 +678,111 @@ export class SupanoticeWidget extends LitElement {
     .publication-image {
       margin: 0 0 12px 0;
       width: 100%;
+      max-height: 200px;
       border-radius: 6px;
       overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f9fafb;
     }
     
     .publication-image img {
       width: 100%;
       height: auto;
+      max-height: 200px;
+      object-fit: cover;
+      object-position: center;
       display: block;
       transition: transform 0.3s ease;
+    }
+    
+    /* Styles for Trix attachment galleries and figures */
+    .publication-body .attachment-gallery {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0;
+    }
+    
+    .publication-body .attachment-gallery figure {
+      flex: 1;
+      min-width: 0;
+      margin: 0;
+    }
+    
+    .publication-body .attachment-gallery--3 figure {
+      flex-basis: calc(33.333% - 6px);
+    }
+    
+    .publication-body .attachment {
+      display: block;
+      width: 100%;
+    }
+    
+    .publication-body .attachment[href] {
+      cursor: pointer;
+    }
+    
+    /* Style regular links in publication content */
+    .publication-body a:not(.attachment) {
+      color: #2563eb;
+      text-decoration: underline;
+    }
+    
+    .publication-body a:not(.attachment):hover {
+      color: #1d4ed8;
+    }
+    
+    .publication-body .attachment img {
+      width: 100%;
+      height: auto;
+      max-height: 150px;
+      object-fit: cover;
+      object-position: center;
+      border-radius: 4px;
+      display: block;
+    }
+    
+    .publication-body .attachment__caption {
+      display: none;
+    }
+    
+    /* Handle standalone figures (not in galleries) */
+    .publication-body figure:not(.attachment-gallery figure) {
+      margin: 16px 0;
+      text-align: center;
+    }
+    
+    .publication-body figure:not(.attachment-gallery figure) .attachment {
+      display: inline-block;
+      max-width: 100%;
+    }
+    
+    .publication-body figure:not(.attachment-gallery figure) .attachment img {
+      max-width: 100%;
+      height: auto;
+      max-height: 200px;
+      object-fit: contain;
+      object-position: center;
+      border-radius: 4px;
+      display: block;
+      margin: 0 auto;
+    }
+    
+    .publication-body figure:not(.attachment-gallery figure) .attachment__caption {
+      display: none;
+    }
+    
+    /* Handle single images in content */
+    .publication-body img:not(.attachment img) {
+      max-width: 100%;
+      height: auto;
+      max-height: 200px;
+      object-fit: cover;
+      border-radius: 4px;
+      display: block;
+      margin: 8px auto;
     }
     
     .publication-item:hover .publication-image img {
@@ -693,14 +822,42 @@ export class SupanoticeWidget extends LitElement {
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
+      margin-top: 8px;
     }
 
     .label {
-      font-size: 12px;
-      padding: 4px 8px;
-      border-radius: 9999px;
-      background-color: #e5e7eb;
-      color: #4b5563;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+    }
+
+    /* Different colors for different label types */
+    .label:nth-child(1) {
+      background-color: #dbeafe;
+      color: #1e40af;
+    }
+
+    .label:nth-child(2) {
+      background-color: #dcfce7;
+      color: #166534;
+    }
+
+    .label:nth-child(3) {
+      background-color: #fef3c7;
+      color: #92400e;
+    }
+
+    .label:nth-child(4) {
+      background-color: #fce7f3;
+      color: #be185d;
+    }
+
+    .label:nth-child(n+5) {
+      background-color: #f3f4f6;
+      color: #374151;
     }
 
     .empty {

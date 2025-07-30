@@ -885,6 +885,59 @@ export class SupanoticeWidget extends LitElement {
       color: #4f46e5;
     }
 
+    /* Blockquote styling */
+    .publication-body blockquote {
+      margin: 16px 0;
+      padding: 12px 16px;
+      border-left: 4px solid #e5e7eb;
+      background-color: #f9fafb;
+      font-style: italic;
+      color: #6b7280;
+      border-radius: 0 4px 4px 0;
+    }
+    
+    .publication-body blockquote p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    
+    .publication-body blockquote p:not(:last-child) {
+      margin-bottom: 8px;
+    }
+    
+    /* Code block styling */
+    .publication-body pre {
+      margin: 16px 0;
+      padding: 16px;
+      background-color: #1e293b;
+      color: #e2e8f0;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      border: 1px solid #334155;
+    }
+    
+    .publication-body pre code {
+      background: none;
+      padding: 0;
+      border-radius: 0;
+      font-size: inherit;
+      color: inherit;
+    }
+    
+    /* Inline code styling */
+    .publication-body code {
+      background-color: #f1f5f9;
+      color: #475569;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      font-size: 13px;
+    }
+
     /* Responsive adjustments */
     @media (max-width: 600px) {
       .widget {

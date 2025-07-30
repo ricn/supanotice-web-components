@@ -3,6 +3,18 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "description": "Web components for Supanotice notification widgets",
+  "keywords": ["web-components", "notifications", "lit", "typescript", "supanotice"],
+  "author": "Supanotice",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-username/supanotice-web-components.git"
+  },
+  "homepage": "https://github.com/your-username/supanotice-web-components#readme",
+  "bugs": {
+    "url": "https://github.com/your-username/supanotice-web-components/issues"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

@@ -1,0 +1,141 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build library
+        run: npm run build:lib
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-files
+          path: dist/
+
+  release:
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-files
+          path: dist/
+
+      - name: Generate version number
+        id: version
+        run: |
+          # Generate version based on timestamp and short commit hash
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          SHORT_SHA=${GITHUB_SHA::7}
+          VERSION="1.0.${TIMESTAMP}-${SHORT_SHA}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Generated version: ${VERSION}"
+
+      - name: Update package.json version
+        run: |
+          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          release_name: Release v${{ steps.version.outputs.version }}
+          body: |
+            ## Changes in this Release
+            
+            **Commit:** ${{ github.sha }}
+            **Build Date:** ${{ steps.version.outputs.version }}
+            
+            ### Built Components
+            - `supanotice-widget`: Main notification widget component
+            - `supanotice-preview`: Preview component for testing and demonstration
+            
+            ### Files in this release:
+            - `supanotice-components.es.js` - ES module build
+            - `supanotice-components.es.js.map` - Source map
+            - Type definitions included
+            
+            ### Usage
+            ```html
+            <script type="module" src="https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.version }}/supanotice-components.es.js"></script>
+            <supanotice-widget widget-id="your-widget-id"></supanotice-widget>
+            ```
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset - ES Module
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist/supanotice-components.es.js
+          asset_name: supanotice-components.es.js
+          asset_content_type: application/javascript
+
+      - name: Upload Release Asset - Source Map
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist/supanotice-components.es.js.map
+          asset_name: supanotice-components.es.js.map
+          asset_content_type: application/json
+
+      - name: Upload Release Asset - Package
+        run: |
+          # Create a zip file with all dist contents
+          cd dist && zip -r ../supanotice-components-v${{ steps.version.outputs.version }}.zip . && cd ..
+          
+      - name: Upload Package Zip
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./supanotice-components-v${{ steps.version.outputs.version }}.zip
+          asset_name: supanotice-components-v${{ steps.version.outputs.version }}.zip
+          asset_content_type: application/zip

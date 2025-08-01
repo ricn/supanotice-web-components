@@ -212,12 +212,13 @@ export class SupanoticeWidget extends LitElement {
                   </svg>
               ` 
               : html`
-                <!-- News/announcement icon when closed -->
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="7" y1="8" x2="17" y2="8"></line>
-                  <line x1="7" y1="12" x2="17" y2="12"></line>
-                  <line x1="7" y1="16" x2="17" y2="16"></line>
+                <!-- Beautiful bell notification icon when closed -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="notification-bell">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" class="bell-clapper"></path>
+                  <circle cx="12" cy="3" r="1" class="bell-top"></circle>
+                  <path class="bell-wave bell-wave-1" d="M2 8c0 0 4-1 10-1s10 1 10 1" stroke-opacity="0.3"></path>
+                  <path class="bell-wave bell-wave-2" d="M4 6c0 0 3.5-0.5 8-0.5s8 0.5 8 0.5" stroke-opacity="0.6"></path>
                 </svg>
               `
             }
@@ -505,6 +506,54 @@ export class SupanoticeWidget extends LitElement {
     .bubble:hover {
       transform: scale(1.05);
       filter: brightness(0.85);
+    }
+    
+    /* Bell notification animation styles */
+    .notification-bell {
+      animation: bell-pulse 2s infinite;
+      transform-origin: center top;
+    }
+    
+    @keyframes bell-pulse {
+      0% { transform: scale(1); }
+      5% { transform: scale(1.1); }
+      10% { transform: scale(1); }
+      15% { transform: scale(1.05); }
+      20% { transform: scale(1); }
+      100% { transform: scale(1); }
+    }
+    
+    .bell-wave {
+      opacity: 0;
+      animation: wave-fade 4s infinite;
+    }
+    
+    .bell-wave-1 {
+      animation-delay: 0.5s;
+    }
+    
+    .bell-wave-2 {
+      animation-delay: 1s;
+    }
+    
+    @keyframes wave-fade {
+      0% { opacity: 0; transform: translateY(0); }
+      20% { opacity: 0.8; transform: translateY(-2px); }
+      40% { opacity: 0; transform: translateY(-4px); }
+      100% { opacity: 0; transform: translateY(-4px); }
+    }
+    
+    .bubble:hover .notification-bell {
+      animation: bell-ring 0.5s ease;
+    }
+    
+    @keyframes bell-ring {
+      0% { transform: rotate(0); }
+      20% { transform: rotate(15deg); }
+      40% { transform: rotate(-15deg); }
+      60% { transform: rotate(7deg); }
+      80% { transform: rotate(-7deg); }
+      100% { transform: rotate(0); }
     }
 
     .bubble.open {

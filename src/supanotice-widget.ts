@@ -115,6 +115,22 @@ export class SupanoticeWidget extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.fetchWidgetConfiguration();
+    this.updateViewportHeight();
+    
+    // Update viewport height on resize and orientation change
+    window.addEventListener('resize', this.updateViewportHeight.bind(this));
+    window.addEventListener('orientationchange', this.updateViewportHeight.bind(this));
+  }
+  
+  /**
+   * Updates the CSS variable for viewport height to handle mobile browsers
+   * with dynamic toolbars like Safari
+   */
+  private updateViewportHeight() {
+    // Get the actual viewport height
+    const vh = window.innerHeight * 0.01;
+    // Set the value in the --vh custom property
+    this.style.setProperty('--vh', `${vh}px`);
   }
 
   /**
@@ -465,6 +481,7 @@ export class SupanoticeWidget extends LitElement {
   static styles = css`
     :host {
       --bubble-size: 4rem;
+      --vh: 1vh; /* Dynamic viewport height unit */
       display: block;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     }
@@ -594,7 +611,7 @@ export class SupanoticeWidget extends LitElement {
     .widget {
       pointer-events: auto; /* Make widget clickable */
       width: 460px;
-      height: calc(100vh - 100px);
+      height: calc(var(--vh, 1vh) * 100 - 100px);
       max-height: 80vh;
       background-color: white;
       border-radius: 12px;
@@ -1014,7 +1031,8 @@ export class SupanoticeWidget extends LitElement {
       .widget {
         width: 100%;
         max-width: calc(100vw - 40px);
-        height: calc(100vh - 100px);
+        height: calc(var(--vh, 1vh) * 100 - 100px);
+        max-height: calc(var(--vh, 1vh) * 80);
         right: 50%;
         transform: translateX(50%);
       }

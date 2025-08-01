@@ -191,7 +191,6 @@ export class SupanoticeWidget extends LitElement {
   render() {
     return html`
       <div class="container" style="--background-color: ${this.widgetSettings.backgroundColor}; --color: ${this.widgetSettings.color};">
-        ${this.isLoading ? html`<div class="loading">Loading widget configuration...</div>` : ''}
         ${this.errorMessage ? html`<div class="error">${this.errorMessage}</div>` : ''}
         ${this.isOpen ? this.renderWidget() : ''}
         <button 
@@ -201,14 +200,16 @@ export class SupanoticeWidget extends LitElement {
           aria-expanded=${this.isOpen}
         >
           ${this.unreadCount > 0 ? html`<span class="badge">${this.unreadCount}</span>` : ''}
-          ${this.isOpen 
-              ? html`
-                <!-- X icon when open -->
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10" fill="none"></circle>
-                  <line x1="15" y1="9" x2="9" y2="15"></line>
-                  <line x1="9" y1="9" x2="15" y2="15"></line>
-                </svg>
+          ${this.isLoading 
+              ? html`<div class="spinner"></div>`
+              : this.isOpen 
+                ? html`
+                  <!-- X icon when open -->
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" fill="none"></circle>
+                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                  </svg>
               ` 
               : html`
                 <!-- News/announcement icon when closed -->
@@ -508,6 +509,20 @@ export class SupanoticeWidget extends LitElement {
 
     .bubble.open {
       filter: brightness(0.75);
+    }
+    
+    /* Loading spinner animation */
+    @keyframes spinner {
+      to {transform: rotate(360deg);}
+    }
+    
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spinner 0.8s linear infinite;
     }
 
     .badge {

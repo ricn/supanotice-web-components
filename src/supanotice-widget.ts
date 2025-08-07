@@ -298,6 +298,7 @@ export class SupanoticeWidget extends LitElement {
     const hasFullBody = !!publication.fullBody;
     const bodyText = isExpanded && hasFullBody ? publication.fullBody : publication.body;
     const isRead = this.isPublicationRead(publication.id);
+    const formattedDate = this._formatDate(publication.published_at);
     
     // We will track view time on mouse enter or touch instead of on render
     
@@ -305,9 +306,9 @@ export class SupanoticeWidget extends LitElement {
       <div class="publication-item ${isRead ? 'read' : 'unread'} ${isExpanded ? 'expanded' : ''}"
            @mouseenter=${() => this.startTrackingPublication(publication.id)}
            @touchstart=${() => this.startTrackingPublication(publication.id)}>
-        <div class="publication-top">
-          <span class="publication-date">${this._formatDate(publication.published_at)}</span>
-        </div>
+        ${formattedDate ? html`<div class="publication-top">
+          <span class="publication-date">${formattedDate}</span>
+        </div>` : ''}
         <div class="publication-header" @click=${() => this.startTrackingPublication(publication.id)}>
           <h3>${publication.title}</h3>
           <div class="publication-labels">
@@ -363,12 +364,12 @@ export class SupanoticeWidget extends LitElement {
 
   private _formatDate(dateString: string): string {
     if (!dateString) return '';
-    
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
-    }).format(date);
+    const now = new Date();
+    const options: Intl.DateTimeFormatOptions = date.getFullYear() !== now.getFullYear()
+      ? { month: 'short', day: 'numeric', year: 'numeric' }
+      : { month: 'short', day: 'numeric' };
+    return new Intl.DateTimeFormat(undefined, options).format(date);
   }
   
   /**
@@ -751,8 +752,17 @@ export class SupanoticeWidget extends LitElement {
 
 
     .publication-date {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 9999px; /* pill */
       font-size: 12px;
-      color: #6b7280;
+      font-weight: 500;
+      line-height: 1;
+      color: #374151;
+      background-color: #f3f4f6; /* neutral badge */
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
     }
 
     .publication-body {

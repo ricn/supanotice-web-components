@@ -22,6 +22,8 @@ interface WidgetSettings {
   color: string;
   maxItems: number;
   newspage_url?: string | null;
+  projectName?: string | null;
+  projectId?: string | null;
 }
 
 interface WidgetApiResponse {
@@ -30,6 +32,8 @@ interface WidgetApiResponse {
   background_color: string;
   publications: PublicationItem[];
   newspage_url?: string | null;
+  project_name?: string | null;
+  project_id?: string | null;
 }
 
 /**
@@ -134,6 +138,14 @@ export class SupanoticeWidget extends LitElement {
   }
 
   /**
+   * Safely build absolute API URLs from the configured apiEndpoint
+   */
+  private buildApiUrl(path: string): string {
+    const base = (this.apiEndpoint || '').replace(/\/$/, '');
+    return `${base}${path}`;
+  }
+
+  /**
    * Called when an observed property changes.
    * Detects changes to the refresh-key property and reloads the configuration.
    */
@@ -157,7 +169,7 @@ export class SupanoticeWidget extends LitElement {
     this.errorMessage = null;
     
     try {
-      const response = await fetch(`${this.apiEndpoint}/api/v1/widgets/${this.widgetId}`);
+      const response = await fetch(this.buildApiUrl(`/api/v1/widgets/${this.widgetId}`));
       
       if (!response.ok) {
         throw new Error(`Failed to fetch widget configuration: ${response.statusText}`);
@@ -171,7 +183,9 @@ export class SupanoticeWidget extends LitElement {
         title: data.title || this.widgetSettings.title,
         color: data.color || this.widgetSettings.color,
         backgroundColor: data.background_color || this.widgetSettings.backgroundColor,
-        newspage_url: data.newspage_url || this.widgetSettings.newspage_url
+        newspage_url: data.newspage_url || this.widgetSettings.newspage_url,
+        projectName: data.project_name || this.widgetSettings.projectName,
+        projectId: data.project_id || this.widgetSettings.projectId
       };
       
       // Update publications from the API response
@@ -184,6 +198,161 @@ export class SupanoticeWidget extends LitElement {
     } finally {
       this.isLoading = false;
     }
+  }
+
+  private openSubscribeModal() {
+    this.subscribeEmail = '';
+    this.subscribeError = null;
+    this.subscribeSuccess = false;
+    this.showSubscribeModal = true;
+  }
+
+  private closeSubscribeModal() {
+    this.showSubscribeModal = false;
+    this.subscribeLoading = false;
+  }
+
+  private isValidEmail(email: string): boolean {
+    // Simple email regex for basic validation
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  private async submitSubscription(e?: Event) {
+    e?.preventDefault();
+    this.subscribeError = null;
+    this.subscribeSuccess = false;
+    this.subscribeMessage = null;
+    const email = (this.subscribeEmail || '').trim();
+    if (!this.isValidEmail(email)) {
+      this.subscribeError = 'Please enter a valid email address.';
+      return;
+    }
+    this.subscribeLoading = true;
+    try {
+      const url = this.widgetSettings.projectId
+        ? this.buildApiUrl(`/api/v1/projects/${this.widgetSettings.projectId}/subscribers`)
+        : this.buildApiUrl(`/api/v1/widgets/${this.widgetId}/subscriptions`);
+
+      console.debug('Supanotice subscription request', {
+        url,
+        projectId: this.widgetSettings.projectId,
+        widgetId: this.widgetId
+      });
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ email })
+      });
+
+      let payload: any = null;
+      try { payload = await res.json(); } catch { /* ignore */ }
+
+      if (res.status === 201) {
+        this.subscribeSuccess = true;
+        this.subscribeMessage = payload?.message || 'Subscription successful. Please check your email to confirm your subscription.';
+        return;
+      }
+
+      if (res.status === 409) {
+        this.subscribeError = payload?.error || 'Email address is already subscribed to this project';
+        return;
+      }
+
+      if (res.status === 422) {
+        const emailErrors = payload?.details?.email as string[] | undefined;
+        this.subscribeError = emailErrors && emailErrors.length > 0 ? emailErrors[0] : (payload?.error || 'Validation failed');
+        return;
+      }
+
+      if (res.status === 404) {
+        this.subscribeError = payload?.error || 'Project not found';
+        return;
+      }
+
+      if (res.status === 400) {
+        this.subscribeError = payload?.error || 'Missing required parameters: project_id and email';
+        return;
+      }
+
+      // Fallback for any other error status
+      this.subscribeError = payload?.error || 'Unable to subscribe right now. Please try again later.';
+    } catch (err) {
+      console.error('Supanotice subscription network error', err);
+      this.subscribeError = err instanceof TypeError
+        ? 'Network error (possibly CORS or connectivity). Please verify your API endpoint and CORS configuration.'
+        : (err instanceof Error ? err.message : 'Something went wrong.');
+    } finally {
+      this.subscribeLoading = false;
+    }
+  }
+
+  private renderSubscribeModal() {
+    const title = 'Subscribe to Updates';
+    const projectName = this.widgetSettings.projectName || this.widgetSettings.title;
+    const subtitle = `Get notified when ${projectName} publishes new updates.`;
+    const canSubmit = this.isValidEmail(this.subscribeEmail) && !this.subscribeLoading;
+    return html`
+      <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="subscribe-title" @click=${() => this.closeSubscribeModal()}>
+        <div class="modal-card" @click=${(e: Event) => e.stopPropagation()}>
+          <button class="modal-close" @click=${() => this.closeSubscribeModal()} aria-label="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4b5563" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+
+          <h3 id="subscribe-title" class="modal-title">${title}</h3>
+          <p class="modal-subtitle">${subtitle}</p>
+
+          ${this.subscribeSuccess ? html`
+            <div class="success-box">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+              <span>${this.subscribeMessage || "Thanks! You're subscribed."}</span>
+            </div>
+          ` : html`
+            <form class="subscribe-form" @submit=${(e: Event) => this.submitSubscription(e)}>
+              <label class="input-label" for="subscribe-email">Email address</label>
+              <input
+                id="subscribe-email"
+                type="email"
+                class="email-input"
+                placeholder="your@email.com"
+                .value=${this.subscribeEmail}
+                @input=${(e: Event) => {
+                  const target = e.target as HTMLInputElement;
+                  this.subscribeEmail = target.value;
+                }}
+                required
+                autocomplete="email"
+                ?disabled=${this.subscribeLoading}
+              />
+              ${this.subscribeError ? html`<div class="error-text">${this.subscribeError}</div>` : ''}
+
+              <p class="legal-text">
+                By clicking subscribe, you accept our
+                <a href="https://supanotice.com/privacy" target="_blank" rel="noopener noreferrer">privacy policy</a>
+                and
+                <a href="https://supanotice.com/terms" target="_blank" rel="noopener noreferrer">terms and conditions</a>.
+              </p>
+
+              <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" @click=${() => this.closeSubscribeModal()} ?disabled=${this.subscribeLoading}>Cancel</button>
+                <button type="submit" class="btn btn-primary" ?disabled=${!canSubmit}>
+                  ${this.subscribeLoading ? html`<span class="btn-spinner"></span> Subscribing...` : 'Subscribe'}
+                </button>
+              </div>
+            </form>
+          `}
+        </div>
+      </div>
+    `;
   }
 
   /**
@@ -203,6 +372,27 @@ export class SupanoticeWidget extends LitElement {
 
   @state()
   private expandedPublications: Set<string> = new Set();
+
+  /**
+   * Subscribe modal UI state
+   */
+  @state()
+  private showSubscribeModal = false;
+
+  @state()
+  private subscribeEmail: string = '';
+
+  @state()
+  private subscribeLoading = false;
+
+  @state()
+  private subscribeError: string | null = null;
+
+  @state()
+  private subscribeSuccess = false;
+
+  @state()
+  private subscribeMessage: string | null = null;
 
   render() {
     return html`
@@ -271,12 +461,21 @@ export class SupanoticeWidget extends LitElement {
           ` : html`
             <h2 id="widget-title">${this.widgetSettings.title}</h2>
           `}
-          <button class="close-button" @click=${() => this.closeWidget()} aria-label="Close">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
+          <div class="header-actions">
+            <button class="subscribe-header-btn" @click=${() => this.openSubscribeModal()} aria-label="Subscribe to updates">
+              <svg class="icon-mail" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="6" width="18" height="14" rx="2" ry="2"></rect>
+                <polyline points="3 7 12 13 21 7"></polyline>
+              </svg>
+              <span>Subscribe</span>
+            </button>
+            <button class="close-button" @click=${() => this.closeWidget()} aria-label="Close">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
         </header>
         <div class="publication-list">
               ${this.publications.length === 0 ? 
@@ -289,6 +488,7 @@ export class SupanoticeWidget extends LitElement {
         <footer class="widget-footer">
           Powered by <a href="https://supanotice.com" target="_blank" rel="noopener noreferrer" class="supanotice-link">Supanotice</a>
         </footer>
+        ${this.showSubscribeModal ? this.renderSubscribeModal() : ''}
       </div>
     `;
   }
@@ -298,6 +498,7 @@ export class SupanoticeWidget extends LitElement {
     const hasFullBody = !!publication.fullBody;
     const bodyText = isExpanded && hasFullBody ? publication.fullBody : publication.body;
     const isRead = this.isPublicationRead(publication.id);
+    const formattedDate = this._formatDate(publication.published_at);
     
     // We will track view time on mouse enter or touch instead of on render
     
@@ -305,9 +506,9 @@ export class SupanoticeWidget extends LitElement {
       <div class="publication-item ${isRead ? 'read' : 'unread'} ${isExpanded ? 'expanded' : ''}"
            @mouseenter=${() => this.startTrackingPublication(publication.id)}
            @touchstart=${() => this.startTrackingPublication(publication.id)}>
-        <div class="publication-top">
-          <span class="publication-date">${this._formatDate(publication.published_at)}</span>
-        </div>
+        ${formattedDate ? html`<div class="publication-top">
+          <span class="publication-date">${formattedDate}</span>
+        </div>` : ''}
         <div class="publication-header" @click=${() => this.startTrackingPublication(publication.id)}>
           <h3>${publication.title}</h3>
           <div class="publication-labels">
@@ -363,12 +564,12 @@ export class SupanoticeWidget extends LitElement {
 
   private _formatDate(dateString: string): string {
     if (!dateString) return '';
-    
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
-    }).format(date);
+    const now = new Date();
+    const options: Intl.DateTimeFormatOptions = date.getFullYear() !== now.getFullYear()
+      ? { month: 'short', day: 'numeric', year: 'numeric' }
+      : { month: 'short', day: 'numeric' };
+    return new Intl.DateTimeFormat(undefined, options).format(date);
   }
   
   /**
@@ -644,6 +845,12 @@ export class SupanoticeWidget extends LitElement {
       align-items: center;
     }
 
+    .header-actions {
+       display: flex;
+       align-items: center;
+       gap: 8px;
+     }
+
     #widget-title {
       margin: 0;
       font-size: 18px;
@@ -690,7 +897,50 @@ export class SupanoticeWidget extends LitElement {
     .close-button:hover {
       background-color: rgba(255, 255, 255, 0.1);
     }
+
+    .subscribe-header-btn {
+      pointer-events: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+      padding: 6px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1; /* ensure consistent vertical centering */
+      cursor: pointer;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+
+    .subscribe-header-btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+      transform: translateY(-1px);
+    }
+
+    .subscribe-header-btn:active {
+      transform: translateY(0);
+    }
     
+    /* Center and size the email icon in the subscribe button */
+    .subscribe-header-btn .icon-mail {
+      width: 16px;
+      height: 16px;
+      display: block;
+      flex-shrink: 0;
+      margin-top: -2px; /* align exactly centered */
+      align-self: center;
+      transform: translateY(0.5px); /* micro-tweak for optical centering */
+    }
+
+    /* Ensure text aligns with icon vertically */
+    .subscribe-header-btn span {
+      display: inline-block;
+      line-height: 16px; /* match icon height for perfect centering */
+    }
+
     .feather {
       transition: transform 0.2s ease;
     }
@@ -751,8 +1001,17 @@ export class SupanoticeWidget extends LitElement {
 
 
     .publication-date {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 9999px; /* pill */
       font-size: 12px;
-      color: #6b7280;
+      font-weight: 500;
+      line-height: 1;
+      color: #374151;
+      background-color: #f3f4f6; /* neutral badge */
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
     }
 
     .publication-body {
@@ -971,6 +1230,179 @@ export class SupanoticeWidget extends LitElement {
     
     .supanotice-link:hover {
       color: #1d4ed8;
+    }
+
+    /* Subscribe modal */
+    .modal-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(17, 24, 39, 0.6); /* slate-900/60 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 20;
+    }
+
+    .modal-card {
+      position: relative;
+      width: 100%;
+      max-width: 520px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      border: 1px solid #e5e7eb;
+      padding: 20px 20px 16px 20px;
+      color: #111827;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      padding: 4px;
+      cursor: pointer;
+    }
+
+    .modal-close:hover {
+      background: #f3f4f6;
+    }
+
+    .modal-title {
+      margin: 4px 0 6px 0;
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .modal-subtitle {
+      margin: 0 0 16px 0;
+      color: #4b5563;
+      font-size: 14px;
+    }
+
+    .subscribe-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .input-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .email-input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
+      font-size: 14px;
+      color: #111827;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .email-input::placeholder {
+      color: #9ca3af;
+    }
+
+    .email-input:focus {
+      border-color: var(--background-color, #4f46e5);
+      box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+    }
+
+    .legal-text {
+      margin: 2px 0 0 0;
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .legal-text a {
+      color: #4f46e5;
+      text-decoration: underline;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 36px;
+      padding: 0 14px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, filter 0.2s ease;
+    }
+
+    .btn-secondary {
+      background: #ffffff;
+      color: #111827;
+      border-color: #d1d5db;
+    }
+
+    .btn-secondary:hover {
+      background: #f9fafb;
+    }
+
+    .btn-primary {
+      background: var(--background-color, #4f46e5);
+      border-color: var(--background-color, #4f46e5);
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+    }
+
+    .btn-primary:hover {
+      background: var(--background-color, #4f46e5);
+      border-color: var(--background-color, #4f46e5);
+    }
+
+    .btn[disabled] {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.5);
+      border-top-color: #fff;
+      border-radius: 50%;
+      margin-right: 8px;
+      animation: spinner 0.8s linear infinite;
+    }
+
+    .error-text {
+      color: #b91c1c;
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .success-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      border: 1px solid #d1fae5;
+      background: #ecfdf5;
+      color: #065f46;
+      border-radius: 8px;
+      margin-top: 8px;
     }
 
     /* Blockquote styling */

@@ -113,6 +113,49 @@ export class SupanoticeWidget extends LitElement {
    */
   private viewTimer: number | null = null;
 
+  // Bound listeners for add/remove
+  private readonly _boundUpdateViewportHeight = this.updateViewportHeight.bind(this);
+
+  // Global click handler to support external links/buttons that control the widget
+  private readonly handleExternalClick = (event: Event) => {
+    const target = event.target as Element | null;
+    if (!target) return;
+
+    const el = target.closest('[data-supanotice-open],[data-supanotice-toggle],[data-supanotice-close]') as HTMLElement | null;
+    if (!el) return;
+
+    // 1) Prefer explicit element targeting via CSS selector
+    const selector = el.getAttribute('data-supanotice-target');
+    if (selector) {
+      const selected = document.querySelector(selector);
+      if (selected !== this) return; // not for this instance
+    } else {
+      // 2) Otherwise, support logical targeting via widget-id
+      const targetId = el.getAttribute('data-supanotice-widget');
+      if (!targetId) {
+        // If multiple widgets exist and no target is set, do nothing to avoid triggering all
+        const widgets = document.querySelectorAll('supanotice-widget');
+        if (widgets.length > 1) return;
+      } else if (targetId !== this.widgetId) {
+        return;
+      }
+    }
+
+    // Prevent navigation for anchor elements acting as triggers
+    const anchor = el.closest('a');
+    if (anchor) {
+      event.preventDefault();
+    }
+
+    if (el.hasAttribute('data-supanotice-open')) {
+      this.open();
+    } else if (el.hasAttribute('data-supanotice-close')) {
+      this.close();
+    } else {
+      this.toggle();
+    }
+  };
+
   /**
    * Lifecycle callback when element is connected to DOM
    */
@@ -122,8 +165,21 @@ export class SupanoticeWidget extends LitElement {
     this.updateViewportHeight();
     
     // Update viewport height on resize and orientation change
-    window.addEventListener('resize', this.updateViewportHeight.bind(this));
-    window.addEventListener('orientationchange', this.updateViewportHeight.bind(this));
+    window.addEventListener('resize', this._boundUpdateViewportHeight);
+    window.addEventListener('orientationchange', this._boundUpdateViewportHeight);
+
+    // Listen for external open/close/toggle triggers (links/buttons with data-supanotice-*)
+    document.addEventListener('click', this.handleExternalClick);
+  }
+  
+  /**
+   * Clean up any global listeners when element is disconnected
+   */
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.removeEventListener('resize', this._boundUpdateViewportHeight);
+    window.removeEventListener('orientationchange', this._boundUpdateViewportHeight);
+    document.removeEventListener('click', this.handleExternalClick);
   }
   
   /**
@@ -443,6 +499,24 @@ export class SupanoticeWidget extends LitElement {
     if (this.widgetSettings.newspage_url) {
       window.open(this.widgetSettings.newspage_url, '_blank', 'noopener,noreferrer');
     }
+  }
+
+  // Public API to control the widget programmatically
+  public open() {
+    if (this.isOpen) return;
+    this.isOpen = true;
+    this.startViewTracking();
+    this.setupAttachmentLinks();
+    this.requestUpdate();
+  }
+
+  public close() {
+    if (!this.isOpen) return;
+    this.closeWidget();
+  }
+
+  public toggle() {
+    this._toggleWidget();
   }
 
   private renderWidget() {
@@ -1084,7 +1158,6 @@ export class SupanoticeWidget extends LitElement {
     .publication-body .attachment img {
       width: 100%;
       height: auto;
-      max-height: 150px;
       object-fit: cover;
       object-position: center;
       border-radius: 4px;

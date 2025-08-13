@@ -82,8 +82,20 @@
         
         <div class="preview-container">
           <supanotice-preview>
-            <supanotice-widget widget-id="59e83c43-29fd-4e93-a97a-828d153e36fe" preview-mode api-endpoint="http://localhost:4000"></supanotice-widget>
+            <supanotice-widget id="demoWidget" widget-id="59e83c43-29fd-4e93-a97a-828d153e36fe" preview-mode api-endpoint="http://localhost:4000"></supanotice-widget>
           </supanotice-preview>
+        </div>
+        
+        <div class="example-code">
+          <h3>Open via regular link</h3>
+          <p>
+            <a href="#" data-supanotice-open data-supanotice-target="#demoWidget">Open</a>
+            &nbsp;•&nbsp;
+            <a href="#" data-supanotice-toggle data-supanotice-target="#demoWidget">Toggle</a>
+            &nbsp;•&nbsp;
+            <a href="#" data-supanotice-close data-supanotice-target="#demoWidget">Close</a>
+          </p>
+          <pre><code>&lt;a href="#" data-supanotice-open data-supanotice-target="#demoWidget"&gt;Open announcements&lt;/a&gt;</code></pre>
         </div>
       </div>
     </div>
@@ -110,6 +122,22 @@
         <li><strong>api-endpoint</strong>: Override the API endpoint URL (optional, defaults to https://supanotice.com)</li>
         <li><strong>preview-mode</strong>: Enable preview mode for use within containers (optional)</li>
       </ul>
+      
+      <h2>Open widget via link</h2>
+      <p>Add data attributes to any clickable element to control the widget:</p>
+      <div class="example-code">
+        <pre><code>&lt;a href="#" data-supanotice-open data-supanotice-target="#myWidget"&gt;Open announcements&lt;/a&gt;
+&lt;a href="#" data-supanotice-toggle data-supanotice-target="#myWidget"&gt;Toggle&lt;/a&gt;
+&lt;a href="#" data-supanotice-close data-supanotice-target="#myWidget"&gt;Close&lt;/a&gt;</code></pre>
+        <p><em>Targeting options</em>:</p>
+        <ul>
+          <li><code>data-supanotice-target</code>: CSS selector for the widget element (e.g. <code>#myWidget</code>)</li>
+          <li><code>data-supanotice-widget</code>: match a specific <code>widget-id</code> if you prefer id-based targeting</li>
+        </ul>
+        <p><em>Programmatic API</em>:</p>
+        <pre><code>const el = document.querySelector('supanotice-widget');
+el.open();   // or el.toggle(), el.close()</code></pre>
+      </div>
       
       <h2>Features</h2>
       <ul>

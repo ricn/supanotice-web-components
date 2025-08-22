@@ -32,7 +32,7 @@ jobs:
       - name: Publish dist to "cdn" branch
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
           branch: cdn
           folder: dist
           clean: true
